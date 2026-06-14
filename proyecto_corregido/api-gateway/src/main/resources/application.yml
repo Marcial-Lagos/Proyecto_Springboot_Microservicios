@@ -19,6 +19,11 @@ spring:
           uri: lb://ms-usuarios
           predicates:
             - Path=/api/v1/usuarios/**
+            # Se pueden agregar filtros específicos para este microservicio si es necesario
+            #como filtros de autenticación, autorización, etc.
+            #filters:
+            #  - name: AuthenticationFilter
+            #   roles: [ADMIN, USER] D
         - id: ms-productos
           uri: lb://ms-productos
           predicates:
