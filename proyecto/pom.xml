@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>cl.duoc</groupId>
+    <artifactId>foodexpress-microservices</artifactId>
+    <version>1.0.0</version>
+    <packaging>pom</packaging>
+
+    <name>FoodExpress - Microservicios</name>
+    <description>Agregador Maven para compilar y probar todos los microservicios.</description>
+
+    <modules>
+        <module>eureka-server</module>
+        <module>api-gateway</module>
+        <module>ms-auth</module>
+        <module>ms-usuarios</module>
+        <module>ms-productos</module>
+        <module>ms-pedidos</module>
+        <module>ms-pagos</module>
+        <module>ms-envios</module>
+        <module>ms-inventario</module>
+        <module>ms-notificaciones</module>
+        <module>ms-resenas</module>
+        <module>ms-cupones</module>
+    </modules>
+</project>

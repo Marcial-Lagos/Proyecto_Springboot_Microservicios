@@ -1,0 +1,90 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: API-GATEWAY
+  cloud:
+    gateway:
+      server:
+        webmvc:
+          discovery:
+            locator:
+              enabled: true
+              lower-case-service-id: true
+          routes:
+            - id: ms-auth
+              uri: lb://ms-auth
+              predicates: [ Path=/api/v1/auth/** ]
+            - id: ms-usuarios
+              uri: lb://ms-usuarios
+              predicates: [ Path=/api/v1/usuarios/** ]
+            - id: ms-productos
+              uri: lb://ms-productos
+              predicates: [ Path=/api/v1/productos/** ]
+            - id: ms-pedidos
+              uri: lb://ms-pedidos
+              predicates: [ Path=/api/v1/pedidos/** ]
+            - id: ms-pagos
+              uri: lb://ms-pagos
+              predicates: [ Path=/api/v1/pagos/** ]
+            - id: ms-envios
+              uri: lb://ms-envios
+              predicates: [ Path=/api/v1/envios/** ]
+            - id: ms-inventario
+              uri: lb://ms-inventario
+              predicates: [ Path=/api/v1/inventario/** ]
+            - id: ms-notificaciones
+              uri: lb://ms-notificaciones
+              predicates: [ Path=/api/v1/notificaciones/** ]
+            - id: ms-resenas
+              uri: lb://ms-resenas
+              predicates: [ Path=/api/v1/resenas/** ]
+            - id: ms-cupones
+              uri: lb://ms-cupones
+              predicates: [ Path=/api/v1/cupones/** ]
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui/index.html
+    urls:
+      - name: 1. Autenticación
+        url: /api/v1/auth/v3/api-docs
+      - name: 2. Usuarios
+        url: /api/v1/usuarios/v3/api-docs
+      - name: 3. Productos
+        url: /api/v1/productos/v3/api-docs
+      - name: 4. Pedidos
+        url: /api/v1/pedidos/v3/api-docs
+      - name: 5. Pagos
+        url: /api/v1/pagos/v3/api-docs
+      - name: 6. Envíos
+        url: /api/v1/envios/v3/api-docs
+      - name: 7. Inventario
+        url: /api/v1/inventario/v3/api-docs
+      - name: 8. Notificaciones
+        url: /api/v1/notificaciones/v3/api-docs
+      - name: 9. Reseñas
+        url: /api/v1/resenas/v3/api-docs
+      - name: 10. Cupones
+        url: /api/v1/cupones/v3/api-docs
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:8761/eureka/}
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+
+jwt:
+  secret: ${JWT_SECRET:foodexpresssupersecretkey2026foodexpresssupersecretkey}
