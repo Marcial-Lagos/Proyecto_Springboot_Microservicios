@@ -10,7 +10,7 @@ services:
       MYSQL_ROOT_HOST: "%"
       MYSQL_DATABASE: db_usuario
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
@@ -28,6 +28,9 @@ services:
     restart: unless-stopped
     environment:
       SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: "8761"
+      EUREKA_CLIENT_REGISTER_WITH_EUREKA: "false"
+      EUREKA_CLIENT_FETCH_REGISTRY: "false"
     ports:
       - "8761:8761"
     networks:
@@ -38,7 +41,7 @@ services:
     container_name: foodexpress-gateway
     restart: unless-stopped
     environment:
-      SPRING_PROFILES_ACTIVE: prod
+      SPRING_PROFILES_ACTIVE: dev
       EUREKA_DEFAULT_ZONE: http://eureka-server:8761/eureka/
       JWT_SECRET: clave-super-secreta-para-clase-123456
     ports:
