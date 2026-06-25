@@ -16,6 +16,8 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -44,6 +46,15 @@ class PagoControllerTest {
                         .content("{\"pedidoId\":5,\"usuarioId\":1,\"monto\":12000.00,\"metodo\":\"WEBPAY\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.referencia").value("REF-PRUEBA"));
+    }
+
+    @Test
+    void procesarConDatosInvalidosRetorna400() throws Exception {
+        mockMvc.perform(post("/api/v1/pagos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"pedidoId\":null,\"usuarioId\":null,\"monto\":0}"))
+                .andExpect(status().isBadRequest());
+        verify(service, never()).procesar(any(PagoRequestDTO.class));
     }
 
     private PagoDTO dto(Long id) {
