@@ -4,7 +4,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+        "spring.flyway.enabled=false",
+        "eureka.client.enabled=false",
+        "spring.cloud.discovery.enabled=false",
+        "jwt.expiration=3600000"
+})
 @ActiveProfiles("test")
 class MsAuthApplicationTests {
 
