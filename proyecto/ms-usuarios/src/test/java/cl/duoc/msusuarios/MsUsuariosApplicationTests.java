@@ -14,6 +14,5 @@ class MsUsuariosApplicationTests {
 
     @Test
     void contextLoads() {
-        // La prueba aprueba si Spring Boot inicia todos los beans sin errores.
     }
 }
