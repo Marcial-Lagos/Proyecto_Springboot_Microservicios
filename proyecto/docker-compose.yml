@@ -6,16 +6,16 @@ services:
     container_name: foodexpress-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: system
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
       MYSQL_ROOT_HOST: "%"
       MYSQL_DATABASE: db_usuario
     ports:
-      - "3307:3306"
+      - "127.0.0.1:3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -psystem --silent"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p\"$${MYSQL_ROOT_PASSWORD}\" --silent"]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -27,7 +27,7 @@ services:
     container_name: foodexpress-eureka
     restart: unless-stopped
     environment:
-      SPRING_PROFILES_ACTIVE: prod
+      SPRING_PROFILES_ACTIVE: dev
       SERVER_PORT: "8761"
       EUREKA_CLIENT_REGISTER_WITH_EUREKA: "false"
       EUREKA_CLIENT_FETCH_REGISTRY: "false"
@@ -43,7 +43,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: dev
       EUREKA_DEFAULT_ZONE: http://eureka-server:8761/eureka/
-      JWT_SECRET: clave-super-secreta-para-clase-123456
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
     ports:
       - "8080:8080"
     depends_on:
@@ -56,15 +56,13 @@ services:
     container_name: foodexpress-ms-auth
     restart: unless-stopped
     environment:
-      SPRING_PROFILES_ACTIVE: prod
+      SPRING_PROFILES_ACTIVE: dev
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/db_usuario
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: system
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USERNAME:?Set MYSQL_USERNAME in .env}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
       EUREKA_DEFAULT_ZONE: http://eureka-server:8761/eureka/
-      JWT_SECRET: clave-super-secreta-para-clase-123456
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       JWT_EXPIRATION: "3600000"
-    ports:
-      - "8083:8083"
     depends_on:
       mysql:
         condition: service_healthy
@@ -78,13 +76,11 @@ services:
     container_name: foodexpress-ms-usuarios
     restart: unless-stopped
     environment:
-      SPRING_PROFILES_ACTIVE: prod
+      SPRING_PROFILES_ACTIVE: dev
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/db_usuarios
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: system
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USERNAME:?Set MYSQL_USERNAME in .env}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
       EUREKA_DEFAULT_ZONE: http://eureka-server:8761/eureka/
-    ports:
-      - "8081:8081"
     depends_on:
       mysql:
         condition: service_healthy
@@ -98,13 +94,11 @@ services:
     container_name: foodexpress-ms-productos
     restart: unless-stopped
     environment:
-      SPRING_PROFILES_ACTIVE: prod
+      SPRING_PROFILES_ACTIVE: dev
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/db_productos
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: system
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USERNAME:?Set MYSQL_USERNAME in .env}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
       EUREKA_DEFAULT_ZONE: http://eureka-server:8761/eureka/
-    ports:
-      - "8082:8082"
     depends_on:
       mysql:
         condition: service_healthy
@@ -118,13 +112,11 @@ services:
     container_name: foodexpress-ms-pedidos
     restart: unless-stopped
     environment:
-      SPRING_PROFILES_ACTIVE: prod
+      SPRING_PROFILES_ACTIVE: dev
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/db_pedidos
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: system
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USERNAME:?Set MYSQL_USERNAME in .env}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
       EUREKA_DEFAULT_ZONE: http://eureka-server:8761/eureka/
-    ports:
-      - "8084:8084"
     depends_on:
       mysql:
         condition: service_healthy
@@ -138,13 +130,11 @@ services:
     container_name: foodexpress-ms-pagos
     restart: unless-stopped
     environment:
-      SPRING_PROFILES_ACTIVE: prod
+      SPRING_PROFILES_ACTIVE: dev
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/db_pagos
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: system
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USERNAME:?Set MYSQL_USERNAME in .env}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
       EUREKA_DEFAULT_ZONE: http://eureka-server:8761/eureka/
-    ports:
-      - "8085:8085"
     depends_on:
       mysql:
         condition: service_healthy
@@ -158,13 +148,11 @@ services:
     container_name: foodexpress-ms-envios
     restart: unless-stopped
     environment:
-      SPRING_PROFILES_ACTIVE: prod
+      SPRING_PROFILES_ACTIVE: dev
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/db_envios
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: system
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USERNAME:?Set MYSQL_USERNAME in .env}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
       EUREKA_DEFAULT_ZONE: http://eureka-server:8761/eureka/
-    ports:
-      - "8086:8086"
     depends_on:
       mysql:
         condition: service_healthy
@@ -178,13 +166,11 @@ services:
     container_name: foodexpress-ms-inventario
     restart: unless-stopped
     environment:
-      SPRING_PROFILES_ACTIVE: prod
+      SPRING_PROFILES_ACTIVE: dev
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/db_inventario
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: system
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USERNAME:?Set MYSQL_USERNAME in .env}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
       EUREKA_DEFAULT_ZONE: http://eureka-server:8761/eureka/
-    ports:
-      - "8087:8087"
     depends_on:
       mysql:
         condition: service_healthy
@@ -198,13 +184,11 @@ services:
     container_name: foodexpress-ms-notificaciones
     restart: unless-stopped
     environment:
-      SPRING_PROFILES_ACTIVE: prod
+      SPRING_PROFILES_ACTIVE: dev
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/db_notificaciones
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: system
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USERNAME:?Set MYSQL_USERNAME in .env}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
       EUREKA_DEFAULT_ZONE: http://eureka-server:8761/eureka/
-    ports:
-      - "8088:8088"
     depends_on:
       mysql:
         condition: service_healthy
@@ -218,13 +202,11 @@ services:
     container_name: foodexpress-ms-resenas
     restart: unless-stopped
     environment:
-      SPRING_PROFILES_ACTIVE: prod
+      SPRING_PROFILES_ACTIVE: dev
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/db_resenas
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: system
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USERNAME:?Set MYSQL_USERNAME in .env}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
       EUREKA_DEFAULT_ZONE: http://eureka-server:8761/eureka/
-    ports:
-      - "8089:8089"
     depends_on:
       mysql:
         condition: service_healthy
@@ -238,13 +220,11 @@ services:
     container_name: foodexpress-ms-cupones
     restart: unless-stopped
     environment:
-      SPRING_PROFILES_ACTIVE: prod
+      SPRING_PROFILES_ACTIVE: dev
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/db_cupones
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: system
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USERNAME:?Set MYSQL_USERNAME in .env}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
       EUREKA_DEFAULT_ZONE: http://eureka-server:8761/eureka/
-    ports:
-      - "8090:8090"
     depends_on:
       mysql:
         condition: service_healthy

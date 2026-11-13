@@ -18,6 +18,7 @@ logs/
 # Variables y configuraciones locales
 .env
 .env.*
+!.env.example
 application-local.properties
 application-prod.properties
 application-secrets.properties

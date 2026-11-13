@@ -6,24 +6,24 @@ Sistema de pedidos de comida construido con Spring Boot 4.0.6, Java 21 y una arq
 
 | Componente | Puerto | Responsabilidad |
 |---|---:|---|
-| API Gateway | 8080 | Punto de entrada, enrutamiento y validación JWT |
-| Eureka Server | 8761 | Registro y descubrimiento de servicios |
-| MySQL 8.4 | 3306 | Motor único de desarrollo con una base lógica por microservicio |
-| ms-auth | 8089 | Registro, login y emisión JWT |
-| ms-usuarios | 8081 | Perfiles de usuario |
-| ms-productos | 8082 | Productos y stock |
-| ms-pedidos | 8083 | Pedidos y comunicación con productos |
-| ms-pagos | 8084 | Procesamiento y reembolso de pagos |
-| ms-envios | 8085 | Seguimiento y estados de envíos |
-| ms-inventario | 8086 | Existencias y ajustes de stock |
-| ms-notificaciones | 8087 | Notificaciones de usuario |
-| ms-resenas | 8088 | Reseñas de productos |
-| ms-cupones | 8090 | Cupones y descuentos |
+| API Gateway | 8080 (host) | Punto de entrada, enrutamiento y validación JWT |
+| Eureka Server | 8761 (host) | Registro y descubrimiento de servicios |
+| MySQL 8.4 | 3307 (host) → 3306 (contenedor) | Motor de desarrollo con una base lógica por microservicio, publicado solo en localhost |
+| ms-auth | 8083 (interno) | Registro, login y emisión JWT |
+| ms-usuarios | 8081 (interno) | Perfiles de usuario |
+| ms-productos | 8082 (interno) | Productos y stock |
+| ms-pedidos | 8084 (interno) | Pedidos y comunicación con productos |
+| ms-pagos | 8085 (interno) | Procesamiento y reembolso de pagos |
+| ms-envios | 8086 (interno) | Seguimiento y estados de envíos |
+| ms-inventario | 8087 (interno) | Existencias y ajustes de stock |
+| ms-notificaciones | 8088 (interno) | Notificaciones de usuario |
+| ms-resenas | 8089 (interno) | Reseñas de productos |
+| ms-cupones | 8090 (interno) | Cupones y descuentos |
 
 ## Decisiones de arquitectura
 
-- Cada microservicio mantiene una base propia: `db_auth`, `db_usuarios`, `db_productos`, `db_pedidos`, `db_pagos`, `db_envios`, `db_inventario`, `db_notificaciones`, `db_resenas` y `db_cupones`.
-- En desarrollo, un solo contenedor MySQL crea las diez bases y el usuario técnico `foodexpress`. Esto simplifica la ejecución local sin perder el aislamiento lógico de datos.
+- Cada microservicio mantiene una base propia: `db_usuario` (auth), `db_usuarios`, `db_productos`, `db_pedidos`, `db_pagos`, `db_envios`, `db_inventario`, `db_notificaciones`, `db_resenas` y `db_cupones`.
+- En desarrollo, un contenedor MySQL crea las diez bases; los servicios acceden por la red privada de Compose y sus puertos no se publican en el host.
 - Eureka resuelve el descubrimiento de servicios. El Gateway enruta las APIs por `lb://`.
 - La documentación OpenAPI se expone en cada servicio y también queda centralizada en el Gateway.
 - Las pruebas son unitarias, no requieren MySQL y utilizan JUnit 5 + Mockito.
@@ -35,8 +35,12 @@ Requisitos: Docker Desktop o Docker Engine con el plugin Docker Compose.
 Desde la carpeta `proyecto`:
 
 ```bash
+Copy-Item .env.example .env
+# Sustituya los valores de ejemplo en .env por valores locales.
 docker compose up --build -d
 ```
+
+`.env` is ignored by Git. The example values are for local development only; replace the password and JWT values with unique generated values and never reuse them in production. `MYSQL_USERNAME` is set to the existing MySQL root account in the local example. When reusing an existing `mysql_data` volume, set `MYSQL_ROOT_PASSWORD` to the password already stored in that database volume; Compose does not rotate credentials in an existing volume.
 
 Verificar estado:
 
@@ -60,22 +64,11 @@ docker compose down -v
 
 - Gateway: `http://localhost:8080`
 - Eureka: `http://localhost:8761`
-- Swagger centralizado: `http://localhost:8080/swagger-ui/index.html`
+- Swagger centralizado: `http://localhost:8080/doc/swagger-ui.html`
 
-La UI central del Gateway permite seleccionar cualquiera de los diez documentos OpenAPI.
+Los servicios de negocio solo escuchan dentro de la red de Compose; usa el Gateway como punto de entrada. La configuración de desarrollo del Gateway define las rutas OpenAPI `/auth/v3/api-docs`, `/usuarios/v3/api-docs`, `/productos/v3/api-docs`, `/pedidos/v3/api-docs`, `/pagos/v3/api-docs`, `/envios/v3/api-docs`, `/inventario/v3/api-docs`, `/notificaciones/v3/api-docs`, `/resenas/v3/api-docs` y `/cupones/v3/api-docs`.
 
-| Microservicio | Swagger directo | Documento OpenAPI por Gateway |
-|---|---|---|
-| Auth | `http://localhost:8089/swagger-ui.html` | `http://localhost:8080/api/v1/auth/v3/api-docs` |
-| Usuarios | `http://localhost:8081/swagger-ui.html` | `http://localhost:8080/api/v1/usuarios/v3/api-docs` |
-| Productos | `http://localhost:8082/swagger-ui.html` | `http://localhost:8080/api/v1/productos/v3/api-docs` |
-| Pedidos | `http://localhost:8083/swagger-ui.html` | `http://localhost:8080/api/v1/pedidos/v3/api-docs` |
-| Pagos | `http://localhost:8084/swagger-ui.html` | `http://localhost:8080/api/v1/pagos/v3/api-docs` |
-| Envíos | `http://localhost:8085/swagger-ui.html` | `http://localhost:8080/api/v1/envios/v3/api-docs` |
-| Inventario | `http://localhost:8086/swagger-ui.html` | `http://localhost:8080/api/v1/inventario/v3/api-docs` |
-| Notificaciones | `http://localhost:8087/swagger-ui.html` | `http://localhost:8080/api/v1/notificaciones/v3/api-docs` |
-| Reseñas | `http://localhost:8088/swagger-ui.html` | `http://localhost:8080/api/v1/resenas/v3/api-docs` |
-| Cupones | `http://localhost:8090/swagger-ui.html` | `http://localhost:8080/api/v1/cupones/v3/api-docs` |
+El puerto host de MySQL es `3307` y está enlazado a `127.0.0.1`; los servicios usan `mysql:3306` dentro de Compose.
 
 ## Ejecutar pruebas
 
