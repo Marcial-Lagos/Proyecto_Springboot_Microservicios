@@ -11,4 +11,5 @@ public class UsuarioDTO {
     private Usuario.Rol rol;
     private String telefono;
     private String direccion;
+    private String biografia;
 }

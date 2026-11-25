@@ -36,11 +36,13 @@ class AuthServiceTest {
         AuthUser user = AuthUser.builder().id(1L).email(request.getEmail()).password("hash").rol(AuthUser.Rol.CLIENTE).build();
         when(repository.findByEmail(request.getEmail())).thenReturn(Optional.of(user));
         when(encoder.matches(request.getPassword(), user.getPassword())).thenReturn(true);
-        when(jwtUtil.generateToken(user.getEmail(), user.getRol().name())).thenReturn("jwt-valido");
+        when(usuarioSyncClient.sincronizarUsuario("cliente", user.getEmail(), request.getPassword())).thenReturn(37L);
+        when(jwtUtil.generateToken(user.getEmail(), user.getRol().name(), 37L)).thenReturn("jwt-valido");
 
         AuthResponse response = service.login(request);
 
         assertEquals("jwt-valido", response.getToken());
+        assertEquals(37L, response.getUsuarioId());
         assertEquals("cliente@foodexpress.cl", response.getEmail());
         assertEquals("CLIENTE", response.getRol());
     }
@@ -52,7 +54,7 @@ class AuthServiceTest {
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> service.login(request));
 
-        assertEquals("Credenciales inválidas", exception.getMessage());
+        assertEquals(org.springframework.http.HttpStatus.UNAUTHORIZED, ((org.springframework.web.server.ResponseStatusException) exception).getStatusCode());
         verifyNoInteractions(encoder, jwtUtil);
     }
 
@@ -65,7 +67,7 @@ class AuthServiceTest {
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> service.login(request));
 
-        assertEquals("Credenciales inválidas", exception.getMessage());
+        assertEquals(org.springframework.http.HttpStatus.UNAUTHORIZED, ((org.springframework.web.server.ResponseStatusException) exception).getStatusCode());
         verifyNoInteractions(jwtUtil);
     }
 
@@ -79,7 +81,8 @@ class AuthServiceTest {
             user.setId(10L);
             return user;
         });
-        when(jwtUtil.generateToken(request.getEmail(), AuthUser.Rol.CLIENTE.name())).thenReturn("jwt-nuevo");
+        when(usuarioSyncClient.sincronizarUsuario(request.getNombre(), request.getEmail(), request.getPassword())).thenReturn(41L);
+        when(jwtUtil.generateToken(request.getEmail(), AuthUser.Rol.CLIENTE.name(), 41L)).thenReturn("jwt-nuevo");
 
         AuthResponse response = service.register(request);
 
@@ -89,6 +92,7 @@ class AuthServiceTest {
         assertEquals(AuthUser.Rol.CLIENTE, captor.getValue().getRol());
         verify(usuarioSyncClient).sincronizarUsuario(request.getNombre(), request.getEmail(), request.getPassword());
         assertEquals("jwt-nuevo", response.getToken());
+        assertEquals(41L, response.getUsuarioId());
     }
 
     @Test
@@ -98,7 +102,7 @@ class AuthServiceTest {
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> service.register(request));
 
-        assertEquals("Email ya registrado", exception.getMessage());
+        assertEquals(org.springframework.http.HttpStatus.CONFLICT, ((org.springframework.web.server.ResponseStatusException) exception).getStatusCode());
         verify(repository, never()).save(any(AuthUser.class));
         verifyNoInteractions(usuarioSyncClient, encoder, jwtUtil);
     }

@@ -27,6 +27,8 @@ public class Usuario {
     private Rol rol = Rol.CLIENTE;
     private String telefono;
     private String direccion;
+    @Column(length = 500)
+    private String biografia;
 
     public enum Rol {
         CLIENTE, ADMIN, REPARTIDOR

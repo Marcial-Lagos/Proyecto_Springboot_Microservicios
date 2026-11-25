@@ -16,6 +16,17 @@ public class UsuarioService {
     private final UsuarioRepository repo;
     private final BCryptPasswordEncoder encoder;
 
+    public UsuarioDTO buscarPorEmail(String email) {
+        return toDTO(repo.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("Perfil no encontrado")));
+    }
+
+    public UsuarioDTO actualizarPerfil(Long id, String nombre, String biografia) {
+        Usuario u = repo.findById(id).orElseThrow(() -> new ResourceNotFoundException("Perfil no encontrado"));
+        u.setNombre(nombre.trim());
+        u.setBiografia(biografia);
+        return toDTO(repo.save(u));
+    }
+
     public List<UsuarioDTO> listar() {
         return repo.findAll().stream().map(this::toDTO).collect(Collectors.toList());
     }
@@ -53,6 +64,7 @@ public class UsuarioService {
         dto.setId(u.getId());
         dto.setNombre(u.getNombre());
         dto.setEmail(u.getEmail());
+        dto.setBiografia(u.getBiografia());
         dto.setRol(u.getRol());
         dto.setTelefono(u.getTelefono());
         dto.setDireccion(u.getDireccion());

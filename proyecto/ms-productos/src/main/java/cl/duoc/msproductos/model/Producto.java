@@ -21,6 +21,7 @@ public class Producto {
     @NotNull
     @DecimalMin("0.0")
     private BigDecimal precio;
+    private BigDecimal precioOferta;
     @NotNull
     @Min(0)
     private Integer stock;
@@ -28,4 +29,10 @@ public class Producto {
     private String imagenUrl;
     @Builder.Default
     private boolean activo = true;
+    @Version
+    @Column(nullable = false, columnDefinition = "bigint default 0")
+    private long version;
+    @Builder.Default
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    private boolean pendienteInventario = true;
 }

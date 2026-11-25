@@ -8,6 +8,9 @@ import cl.duoc.msauth.repository.AuthUserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
@@ -20,29 +23,33 @@ public class AuthService {
 
     public AuthResponse login(LoginRequest req) {
         AuthUser user = repo.findByEmail(req.getEmail())
-                .orElseThrow(() -> new RuntimeException("Credenciales inválidas"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciales inválidas"));
         if (!encoder.matches(req.getPassword(), user.getPassword()))
-            throw new RuntimeException("Credenciales inválidas");
-        return new AuthResponse(jwtUtil.generateToken(user.getEmail(), user.getRol().name()),
-                user.getEmail(),
-                user.getRol().name());
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciales inválidas");
+        return autenticar(user, user.getEmail().split("@")[0], req.getPassword());
     }
 
+    @Transactional
     public AuthResponse register(RegisterRequest req) {
         if (repo.existsByEmail(req.getEmail()))
-            throw new RuntimeException("Email ya registrado");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email ya registrado");
         AuthUser user = AuthUser.builder()
                 .email(req.getEmail())
                 .password(encoder.encode(req.getPassword()))
                 .build();
         repo.save(user);
 
-        // Sincroniza con ms-usuarios (best-effort, no bloquea si falla)
-        usuarioSyncClient.sincronizarUsuario(req.getNombre(), req.getEmail(), req.getPassword());
-        return new AuthResponse(
+        return autenticar(user, req.getNombre(), req.getPassword());
+    }
 
-                jwtUtil.generateToken(user.getEmail(), user.getRol().name()),
-                user.getEmail(),
-                user.getRol().name());
+    private AuthResponse autenticar(AuthUser user, String nombre, String password) {
+        Long id;
+        try {
+            id = usuarioSyncClient.sincronizarUsuario(nombre, user.getEmail(), password);
+        } catch (RuntimeException error) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "El servicio de perfiles no está disponible", error);
+        }
+        String rol = user.getRol().name();
+        return new AuthResponse(jwtUtil.generateToken(user.getEmail(), rol, id), "Bearer", user.getEmail(), rol, id);
     }
 }

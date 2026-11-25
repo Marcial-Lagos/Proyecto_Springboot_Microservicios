@@ -16,6 +16,7 @@ public class Pago {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private Long pedidoId;
+    @Column(unique = true) private Long pedidoSimulado;
     private Long usuarioId;
     private BigDecimal monto;
     @Enumerated(EnumType.STRING)

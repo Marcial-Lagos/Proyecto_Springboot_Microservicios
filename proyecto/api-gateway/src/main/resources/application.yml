@@ -10,7 +10,7 @@ spring:
         webmvc:
           discovery:
             locator:
-              enabled: true
+              enabled: false
               lower-case-service-id: true
           routes:
             - id: ms-auth

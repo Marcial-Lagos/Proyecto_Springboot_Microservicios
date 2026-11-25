@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface PagoRepository extends JpaRepository<Pago, Long> {
+    java.util.Optional<Pago> findByPedidoSimulado(Long pedidoId);
     List<Pago> findByPedidoId(Long pedidoId);
 
     List<Pago> findByUsuarioId(Long usuarioId);

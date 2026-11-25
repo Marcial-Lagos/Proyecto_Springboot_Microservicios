@@ -1,68 +1,85 @@
 package cl.duoc.mspedidos.service;
 
+import cl.duoc.mspedidos.client.PagoClient;
 import cl.duoc.mspedidos.client.ProductoClient;
-import cl.duoc.mspedidos.client.ProductoResponse;
 import cl.duoc.mspedidos.dto.*;
 import cl.duoc.mspedidos.exception.ResourceNotFoundException;
 import cl.duoc.mspedidos.model.*;
 import cl.duoc.mspedidos.repository.PedidoRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-
+import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Objects;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class PedidoService {
     private final PedidoRepository repo;
-    private final ProductoClient productoClient;
+    private final ProductoClient productos;
+    private final PagoClient pagos;
 
-    public List<PedidoDTO> listar() { return repo.findAll().stream().map(this::toDTO).collect(Collectors.toList()); }
-    public List<PedidoDTO> listarPorUsuario(Long uid) { return repo.findByUsuarioId(uid).stream().map(this::toDTO).collect(Collectors.toList()); }
-    public PedidoDTO buscarPorId(Long id) { return toDTO(repo.findById(id).orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado: " + id))); }
+    @Transactional(readOnly = true)
+    public List<PedidoDTO> listar() { return repo.findAll().stream().map(this::toDTO).toList(); }
+    @Transactional(readOnly = true)
+    public List<PedidoDTO> listarPorUsuario(Long uid) { return repo.findByUsuarioId(uid).stream().map(this::toDTO).toList(); }
+    @Transactional(readOnly = true)
+    public PedidoDTO buscarPorId(Long id) { return toDTO(buscar(id)); }
 
-    public PedidoDTO crear(PedidoRequestDTO req) {
-        Pedido pedido = Pedido.builder()
-                .usuarioId(req.getUsuarioId())
-                .direccionEntrega(req.getDireccionEntrega())
-                .estado(Pedido.Estado.PENDIENTE)
-                .build();
-
-        List<ItemPedido> items = req.getItems().stream().map(i -> {
-            ProductoResponse producto = productoClient.obtenerProducto(i.getProductoId());
-            if (producto == null || !producto.isActivo()) {
-                throw new ResourceNotFoundException("Producto no disponible: " + i.getProductoId());
-            }
-            if (producto.getStock() == null || producto.getStock() < i.getCantidad()) {
-                throw new IllegalArgumentException("Stock insuficiente para producto: " + producto.getNombre());
-            }
-
-            ItemPedido item = new ItemPedido();
-            item.setPedido(pedido);
-            item.setProductoId(producto.getId());
-            item.setNombreProducto(producto.getNombre());
-            item.setCantidad(i.getCantidad());
-            item.setPrecioUnitario(producto.getPrecio());
-            return item;
-        }).collect(Collectors.toList());
-
-        BigDecimal total = items.stream()
-                .map(i -> i.getPrecioUnitario().multiply(BigDecimal.valueOf(i.getCantidad())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        pedido.setItems(items);
-        pedido.setTotal(total);
-        Pedido guardado = repo.save(pedido);
-
-        items.forEach(i -> productoClient.descontarStock(i.getProductoId(), i.getCantidad()));
-        return toDTO(guardado);
+    private Pedido buscar(Long id) {
+        return repo.findById(id).orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado: " + id));
     }
 
+    public PedidoDTO crear(PedidoRequestDTO req) {
+        String clave = req.getUsuarioId() + "-" + Objects.requireNonNullElseGet(req.getSolicitudId(), UUID::randomUUID);
+        Pedido pedido = repo.findByClaveSolicitud(clave).orElseGet(() -> crearConReserva(clave, req));
+        if (!mismaSolicitud(pedido, req))
+            throw new IllegalArgumentException("La referencia ya corresponde a otro pedido");
+        if (pedido.getMetodoPago() != null && pedido.getReferenciaPago() == null) {
+            String referencia = pagos.simular(pedido);
+            repo.guardarReferencia(pedido.getId(), referencia);
+            pedido.setReferenciaPago(referencia);
+        }
+        return toDTO(pedido);
+    }
+
+    private boolean mismaSolicitud(Pedido pedido, PedidoRequestDTO req) {
+        if (!Objects.equals(pedido.getDireccionEntrega(), req.getDireccionEntrega())
+                || !Objects.equals(pedido.getTipoEntrega(), req.getTipoEntrega())
+                || !Objects.equals(pedido.getNombreContacto(), req.getNombreContacto())
+                || !Objects.equals(pedido.getCorreoContacto(), req.getCorreoContacto())
+                || !Objects.equals(pedido.getMetodoPago(), req.getMetodoPago())
+                || pedido.getItems().size() != req.getItems().size()) return false;
+        return pedido.getItems().stream().allMatch(item -> req.getItems().stream().anyMatch(linea ->
+                item.getProductoId().equals(linea.getProductoId()) && item.getCantidad().equals(linea.getCantidad())));
+    }
+
+    private Pedido crearConReserva(String clave, PedidoRequestDTO req) {
+        var lineas = productos.reservar(clave, req.getItems());
+        BigDecimal envio = "domicilio".equals(req.getTipoEntrega()) ? BigDecimal.valueOf(3990) : BigDecimal.ZERO;
+        Pedido pedido = Pedido.builder().claveSolicitud(clave).usuarioId(req.getUsuarioId())
+                .tipoEntrega(req.getTipoEntrega()).direccionEntrega(req.getDireccionEntrega()).costoEnvio(envio)
+                .nombreContacto(req.getNombreContacto()).correoContacto(req.getCorreoContacto())
+                .metodoPago(req.getMetodoPago()).build();
+        var items = lineas.stream().map(l -> ItemPedido.builder().pedido(pedido).productoId(l.getProductoId())
+                .nombreProducto(l.getNombreProducto()).cantidad(l.getCantidad()).precioUnitario(l.getPrecioUnitario()).build()).toList();
+        pedido.setItems(items);
+        pedido.setTotal(items.stream().map(i -> i.getPrecioUnitario().multiply(BigDecimal.valueOf(i.getCantidad())))
+                .reduce(envio, BigDecimal::add));
+        try {
+            return repo.saveAndFlush(pedido);
+        } catch (DataIntegrityViolationException concurrente) {
+            return repo.findByClaveSolicitud(clave).orElseThrow(() -> concurrente);
+        }
+    }
+
+    @Transactional
     public PedidoDTO cambiarEstado(Long id, String estado) {
-        Pedido p = repo.findById(id).orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado: " + id));
-        p.setEstado(Pedido.Estado.valueOf(estado.toUpperCase()));
+        Pedido p = buscar(id);
+        p.setEstado(Pedido.Estado.valueOf(estado.toUpperCase(java.util.Locale.ROOT)));
         return toDTO(repo.save(p));
     }
 
@@ -70,7 +87,12 @@ public class PedidoService {
         PedidoDTO dto = new PedidoDTO();
         dto.setId(p.getId()); dto.setUsuarioId(p.getUsuarioId()); dto.setEstado(p.getEstado());
         dto.setTotal(p.getTotal()); dto.setDireccionEntrega(p.getDireccionEntrega()); dto.setFechaCreacion(p.getFechaCreacion());
-        if (p.getItems() != null) dto.setItems(p.getItems().stream().map(i -> { ItemPedidoDTO d = new ItemPedidoDTO(); d.setProductoId(i.getProductoId()); d.setNombreProducto(i.getNombreProducto()); d.setCantidad(i.getCantidad()); d.setPrecioUnitario(i.getPrecioUnitario()); return d; }).collect(Collectors.toList()));
+        dto.setTipoEntrega(p.getTipoEntrega()); dto.setCostoEnvio(p.getCostoEnvio()); dto.setNombreContacto(p.getNombreContacto());
+        dto.setCorreoContacto(p.getCorreoContacto()); dto.setReferenciaPago(p.getReferenciaPago());
+        if (p.getItems() != null) dto.setItems(p.getItems().stream().map(i -> {
+            ItemPedidoDTO d = new ItemPedidoDTO(); d.setProductoId(i.getProductoId()); d.setNombreProducto(i.getNombreProducto());
+            d.setCantidad(i.getCantidad()); d.setPrecioUnitario(i.getPrecioUnitario()); return d;
+        }).toList());
         return dto;
     }
 }

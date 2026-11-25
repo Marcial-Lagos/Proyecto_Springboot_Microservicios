@@ -1,6 +1,6 @@
 # FoodExpress — Proyecto Semestral de Microservicios
 
-Sistema de pedidos de comida construido con Spring Boot 4.0.6, Java 21 y una arquitectura de microservicios.
+Backend de catálogo, cuentas y pedidos de la tienda Nexus. Construido con Spring Boot 4.0.6, Java 25 LTS y una arquitectura de microservicios.
 
 ## Componentes
 
@@ -121,7 +121,7 @@ Authorization: Bearer <token>
 
 ## Correcciones aplicadas
 
-- Java 21 y Spring Boot 4.0.6 fijados en todos los módulos, alineados con los repositorios docentes.
+- Java 25 LTS y Spring Boot 4.0.6 fijados en todos los módulos, alineados con los repositorios docentes.
 - Dependencias Maven duplicadas eliminadas.
 - `pom.xml` agregador incorporado para pruebas y construcción coordinada.
 - Swagger/OpenAPI 3.0.3 estandarizado en los diez microservicios y centralizado en el Gateway, compatible con Spring Boot 4.

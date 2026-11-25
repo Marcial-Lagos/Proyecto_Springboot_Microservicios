@@ -27,11 +27,26 @@ public class PagoService {
         return repo.findByPedidoId(pedidoId).stream().map(this::toDTO).collect(Collectors.toList());
     }
 
+    public PagoDTO registrarParaPedido(PagoRequestDTO req) {
+        var previo = repo.findByPedidoSimulado(req.getPedidoId());
+        if (previo.isPresent()) return toDTO(previo.get());
+        Pago pago = nuevo(req);
+        pago.setPedidoSimulado(req.getPedidoId());
+        try {
+            return toDTO(repo.saveAndFlush(pago));
+        } catch (org.springframework.dao.DataIntegrityViolationException concurrente) {
+            return toDTO(repo.findByPedidoSimulado(req.getPedidoId()).orElseThrow(() -> concurrente));
+        }
+    }
+
     public PagoDTO procesar(PagoRequestDTO req) {
-        Pago pago = Pago.builder().pedidoId(req.getPedidoId()).usuarioId(req.getUsuarioId())
+        return toDTO(repo.save(nuevo(req)));
+    }
+
+    private Pago nuevo(PagoRequestDTO req) {
+        return Pago.builder().pedidoId(req.getPedidoId()).usuarioId(req.getUsuarioId())
                 .monto(req.getMonto()).metodo(req.getMetodo()).estado(Pago.EstadoPago.APROBADO)
                 .referencia("REF-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase()).build();
-        return toDTO(repo.save(pago));
     }
 
     public PagoDTO reembolsar(Long id) {

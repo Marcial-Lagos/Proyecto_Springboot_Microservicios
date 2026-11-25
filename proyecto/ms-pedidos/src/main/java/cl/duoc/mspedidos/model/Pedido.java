@@ -10,10 +10,18 @@ import java.util.List;
 public class Pedido {
     @Id @GeneratedValue(strategy=GenerationType.IDENTITY) private Long id;
     private Long usuarioId;
+    @Column(unique = true, length = 80)
+    private String claveSolicitud;
+    private String tipoEntrega;
+    private String nombreContacto;
+    private String correoContacto;
+    private BigDecimal costoEnvio;
+    private String metodoPago;
+    private String referenciaPago;
     @Enumerated(EnumType.STRING) @Builder.Default
     private Estado estado = Estado.PENDIENTE;
     private BigDecimal total;
-    private String direccionEntrega;
+    @Column(length = 350) private String direccionEntrega;
     @Builder.Default
     private LocalDateTime fechaCreacion = LocalDateTime.now();
     @JsonManagedReference

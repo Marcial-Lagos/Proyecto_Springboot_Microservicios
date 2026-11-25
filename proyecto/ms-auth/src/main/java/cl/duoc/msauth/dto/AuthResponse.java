@@ -16,6 +16,12 @@ public class AuthResponse {
     @Schema(description = "Rol del usuario", example = "USER")
     private String rol;
 
+    private Long usuarioId;
+
+    public AuthResponse(String token, String tipo, String email, String rol) {
+        this(token, tipo, email, rol, null);
+    }
+
     public AuthResponse(String token, String email, String rol) {
         this.token = token;
         this.tipo = "Bearer";

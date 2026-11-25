@@ -1,38 +1,33 @@
 package cl.duoc.msproductos.client;
 
+import cl.duoc.msproductos.repository.ProductoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import java.time.Duration;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class InventarioClient {
+    private final WebClient.Builder clientes;
+    private final ProductoRepository productos;
+    public record Cambio(String nombre, int stock, long revision) {}
 
-    private final WebClient.Builder webClientBuilder;
-
-    /**
-     * Notifica a ms-inventario para ajustar su stockActual cuando cambia el stock
-     * en ms-productos.
-     * Usa delta negativo para descuentos, positivo para reposición.
-     * Best-effort: si falla, solo se loguea.
-     */
-    public void ajustarStock(Long productoId, int delta) {
-        try {
-            webClientBuilder.build()
-                    .patch()
-                    .uri(uriBuilder -> uriBuilder
-                            .scheme("http")
-                            .host("INVENTARIO-SERVICE")
-                            .path("/api/v1/inventario/producto/{productoId}/ajustar")
-                            .queryParam("cantidad", delta)
-                            .build(productoId))
-                    .retrieve()
-                    .toBodilessEntity()
-                    .block();
-        } catch (Exception e) {
-            log.warn("No se pudo sincronizar stock en ms-inventario para producto {}: {}", productoId, e.getMessage());
+    @Scheduled(initialDelay = 10000, fixedDelay = 5000)
+    public void sincronizarPendientes() {
+        for (var p : productos.findTop50ByPendienteInventarioTrueOrderById()) {
+            try {
+                clientes.build().put().uri("http://ms-inventario/interno/inventario/{id}", p.getId())
+                        .bodyValue(new Cambio(p.getNombre(), p.isActivo() ? p.getStock() : 0, p.getVersion()))
+                        .retrieve().toBodilessEntity().block(Duration.ofSeconds(4));
+                productos.confirmarInventario(p.getId(), p.getVersion());
+            } catch (RuntimeException error) {
+                log.warn("Se reintentará la sincronización del inventario desde el producto {}", p.getId());
+                return;
+            }
         }
     }
 }

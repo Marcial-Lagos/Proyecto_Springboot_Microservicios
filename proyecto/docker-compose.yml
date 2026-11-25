@@ -32,7 +32,7 @@ services:
       EUREKA_CLIENT_REGISTER_WITH_EUREKA: "false"
       EUREKA_CLIENT_FETCH_REGISTRY: "false"
     ports:
-      - "8761:8761"
+      - "127.0.0.1:8761:8761"
     networks:
       - foodexpress-net
 
@@ -45,7 +45,7 @@ services:
       EUREKA_DEFAULT_ZONE: http://eureka-server:8761/eureka/
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     depends_on:
       - eureka-server
     networks:
@@ -63,6 +63,8 @@ services:
       EUREKA_DEFAULT_ZONE: http://eureka-server:8761/eureka/
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       JWT_EXPIRATION: "3600000"
+      NEXUS_ADMIN_EMAIL: ${NEXUS_ADMIN_EMAIL:-}
+      NEXUS_ADMIN_PASSWORD: ${NEXUS_ADMIN_PASSWORD:-}
     depends_on:
       mysql:
         condition: service_healthy
@@ -95,6 +97,7 @@ services:
     restart: unless-stopped
     environment:
       SPRING_PROFILES_ACTIVE: dev
+      NEXUS_CATALOGO_INICIAL: "true"
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/db_productos
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USERNAME:?Set MYSQL_USERNAME in .env}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}

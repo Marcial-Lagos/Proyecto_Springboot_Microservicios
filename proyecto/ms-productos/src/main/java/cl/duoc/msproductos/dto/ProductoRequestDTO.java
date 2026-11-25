@@ -12,6 +12,9 @@ public class ProductoRequestDTO {
     @NotNull
     @DecimalMin("0.0")
     private BigDecimal precio;
+    @DecimalMin("1") private BigDecimal precioOferta;
+    @AssertTrue(message = "La oferta debe ser menor que el precio normal")
+    public boolean isOfertaValida() { return precioOferta == null || precio != null && precioOferta.compareTo(precio) < 0; }
     @NotNull
     @Min(0)
     private Integer stock;

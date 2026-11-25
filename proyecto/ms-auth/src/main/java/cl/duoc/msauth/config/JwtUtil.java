@@ -21,7 +21,12 @@ public class JwtUtil {
     }
 
     public String generateToken(String email, String rol) {
+        return generateToken(email, rol, null);
+    }
+
+    public String generateToken(String email, String rol, Long usuarioId) {
         return Jwts.builder()
+                .claim("usuarioId", usuarioId)
                 .setSubject(email)
                 .claim("rol", rol)
                 .setIssuedAt(new Date())

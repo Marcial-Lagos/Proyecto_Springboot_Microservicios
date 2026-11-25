@@ -1,7 +1,7 @@
 package cl.duoc.mspedidos.service;
 
 import cl.duoc.mspedidos.client.ProductoClient;
-import cl.duoc.mspedidos.client.ProductoResponse;
+import cl.duoc.mspedidos.client.PagoClient;
 import cl.duoc.mspedidos.dto.ItemPedidoDTO;
 import cl.duoc.mspedidos.dto.PedidoDTO;
 import cl.duoc.mspedidos.dto.PedidoRequestDTO;
@@ -27,45 +27,52 @@ class PedidoServiceTest {
 
     @Mock private PedidoRepository repository;
     @Mock private ProductoClient productoClient;
+    @Mock private PagoClient pagos;
     @InjectMocks private PedidoService service;
 
     @Test
     void crearPedidoConsultaProductoCalculaTotalYDescuentaStock() {
         PedidoRequestDTO request = pedidoRequest(10L, 2);
-        when(productoClient.obtenerProducto(10L)).thenReturn(producto(10L, 5, true));
-        when(repository.save(any(Pedido.class))).thenAnswer(invocation -> {
-            Pedido pedido = invocation.getArgument(0);
-            pedido.setId(100L);
-            return pedido;
+        request.setSolicitudId(java.util.UUID.randomUUID());
+        request.setTipoEntrega("domicilio");
+        request.setMetodoPago("TARJETA");
+        ItemPedidoDTO reservado = request.getItems().getFirst();
+        reservado.setNombreProducto("Teclado");
+        reservado.setPrecioUnitario(new BigDecimal("12000"));
+        String clave = "1-" + request.getSolicitudId();
+        when(productoClient.reservar(clave, request.getItems())).thenReturn(List.of(reservado));
+        when(repository.saveAndFlush(any(Pedido.class))).thenAnswer(invocation -> {
+            Pedido p = invocation.getArgument(0); p.setId(100L); return p;
         });
+        when(pagos.simular(any())).thenReturn("REF-PRUEBA");
 
         PedidoDTO response = service.crear(request);
 
         assertEquals(100L, response.getId());
-        assertEquals(new BigDecimal("24000"), response.getTotal());
-        verify(productoClient).descontarStock(10L, 2);
+        assertEquals(new BigDecimal("27990"), response.getTotal());
+        assertEquals("REF-PRUEBA", response.getReferenciaPago());
+        verify(repository).guardarReferencia(100L, "REF-PRUEBA");
     }
 
     @Test
-    void crearPedidoConProductoInactivoNoPersiste() {
-        PedidoRequestDTO request = pedidoRequest(10L, 1);
-        when(productoClient.obtenerProducto(10L)).thenReturn(producto(10L, 5, false));
-
-        assertThrows(ResourceNotFoundException.class, () -> service.crear(request));
-
-        verify(repository, never()).save(any(Pedido.class));
-        verify(productoClient, never()).descontarStock(anyLong(), anyInt());
-    }
-
-    @Test
-    void crearPedidoConStockInsuficienteNoPersiste() {
+    void sinStockNoSeGuardaPedidoNiPago() {
         PedidoRequestDTO request = pedidoRequest(10L, 3);
-        when(productoClient.obtenerProducto(10L)).thenReturn(producto(10L, 2, true));
+        when(productoClient.reservar(anyString(), eq(request.getItems()))).thenThrow(new IllegalArgumentException("Stock insuficiente"));
+        assertThrows(IllegalArgumentException.class, () -> service.crear(request));
+        verify(repository, never()).saveAndFlush(any());
+        verifyNoInteractions(pagos);
+    }
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> service.crear(request));
-
-        assertTrue(exception.getMessage().contains("Stock insuficiente"));
-        verify(repository, never()).save(any(Pedido.class));
+    @Test
+    void repetirSolicitudConfirmadaDevuelveElMismoPedido() {
+        PedidoRequestDTO request = pedidoRequest(10L, 1);
+        request.setSolicitudId(java.util.UUID.randomUUID());
+        var item = cl.duoc.mspedidos.model.ItemPedido.builder().productoId(10L).cantidad(1).build();
+        var existente = Pedido.builder().id(77L).usuarioId(1L).direccionEntrega(request.getDireccionEntrega())
+                .items(List.of(item)).referenciaPago("REF-PREVIA").build();
+        when(repository.findByClaveSolicitud("1-" + request.getSolicitudId())).thenReturn(Optional.of(existente));
+        assertEquals(77L, service.crear(request).getId());
+        verifyNoInteractions(productoClient, pagos);
     }
 
     @Test
@@ -99,13 +106,4 @@ class PedidoServiceTest {
         return request;
     }
 
-    private ProductoResponse producto(Long id, int stock, boolean activo) {
-        ProductoResponse response = new ProductoResponse();
-        response.setId(id);
-        response.setNombre("Pizza familiar");
-        response.setPrecio(new BigDecimal("12000"));
-        response.setStock(stock);
-        response.setActivo(activo);
-        return response;
-    }
 }

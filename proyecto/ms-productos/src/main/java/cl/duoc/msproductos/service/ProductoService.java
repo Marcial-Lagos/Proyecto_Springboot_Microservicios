@@ -1,6 +1,5 @@
 package cl.duoc.msproductos.service;
 
-import cl.duoc.msproductos.client.InventarioClient;
 import cl.duoc.msproductos.dto.*;
 import cl.duoc.msproductos.exception.ResourceNotFoundException;
 import cl.duoc.msproductos.model.Producto;
@@ -14,7 +13,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ProductoService {
     private final ProductoRepository repo;
-    private final InventarioClient inventarioClient;
 
     public List<ProductoDTO> listar() {
         return repo.findByActivoTrue().stream().map(this::toDTO).collect(Collectors.toList());
@@ -31,7 +29,7 @@ public class ProductoService {
 
     public ProductoDTO crear(ProductoRequestDTO dto) {
         Producto p = Producto.builder().nombre(dto.getNombre()).descripcion(dto.getDescripcion())
-                .precio(dto.getPrecio()).stock(dto.getStock()).categoria(dto.getCategoria())
+                .precio(dto.getPrecio()).precioOferta(dto.getPrecioOferta()).stock(dto.getStock()).categoria(dto.getCategoria())
                 .imagenUrl(dto.getImagenUrl()).build();
         return toDTO(repo.save(p));
     }
@@ -42,7 +40,9 @@ public class ProductoService {
         p.setNombre(dto.getNombre());
         p.setDescripcion(dto.getDescripcion());
         p.setPrecio(dto.getPrecio());
+        p.setPrecioOferta(dto.getPrecioOferta());
         p.setStock(dto.getStock());
+        p.setPendienteInventario(true);
         p.setCategoria(dto.getCategoria());
         p.setImagenUrl(dto.getImagenUrl());
         return toDTO(repo.save(p));
@@ -51,18 +51,19 @@ public class ProductoService {
     public void descontarStock(Long id, int cantidad) {
         Producto p = repo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado: " + id));
+        if (cantidad <= 0) throw new IllegalArgumentException("Cantidad inválida");
         if (p.getStock() < cantidad)
             throw new RuntimeException("Stock insuficiente");
         p.setStock(p.getStock() - cantidad);
+        p.setPendienteInventario(true);
         repo.save(p);
-        // Sincroniza ms-inventario (best-effort)
-        inventarioClient.ajustarStock(id, -cantidad);
     }
 
     public void eliminar(Long id) {
         Producto p = repo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado: " + id));
         p.setActivo(false);
+        p.setPendienteInventario(true);
         repo.save(p);
     }
 
@@ -72,6 +73,7 @@ public class ProductoService {
         dto.setNombre(p.getNombre());
         dto.setDescripcion(p.getDescripcion());
         dto.setPrecio(p.getPrecio());
+        dto.setPrecioOferta(p.getPrecioOferta());
         dto.setStock(p.getStock());
         dto.setCategoria(p.getCategoria());
         dto.setImagenUrl(p.getImagenUrl());

@@ -78,7 +78,10 @@ public class PedidoController {
                       ]
                     }
                     """)))
-    public ResponseEntity<PedidoDTO> crear(@Valid @org.springframework.web.bind.annotation.RequestBody PedidoRequestDTO dto) {
+    public ResponseEntity<PedidoDTO> crear(@Valid @org.springframework.web.bind.annotation.RequestBody PedidoRequestDTO dto,
+            @org.springframework.web.bind.annotation.RequestHeader(value = "X-User-Id", required = false) Long identidad) {
+        if (identidad != null && !identidad.equals(dto.getUsuarioId()))
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         return ResponseEntity.status(HttpStatus.CREATED).body(service.crear(dto));
     }
 

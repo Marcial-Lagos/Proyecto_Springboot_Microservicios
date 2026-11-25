@@ -1,6 +1,5 @@
 package cl.duoc.msproductos.service;
 
-import cl.duoc.msproductos.client.InventarioClient;
 import cl.duoc.msproductos.dto.ProductoDTO;
 import cl.duoc.msproductos.dto.ProductoRequestDTO;
 import cl.duoc.msproductos.model.Producto;
@@ -23,7 +22,6 @@ import static org.mockito.Mockito.*;
 class ProductoServiceTest {
 
     @Mock private ProductoRepository repository;
-    @Mock private InventarioClient inventarioClient;
     @InjectMocks private ProductoService service;
 
     @Test
@@ -65,7 +63,7 @@ class ProductoServiceTest {
     }
 
     @Test
-    void descontarStockActualizaProductoYSincronizaInventario() {
+    void descontarStockActualizaProductoYDejaInventarioPendiente() {
         Producto producto = producto(4L, 10, true);
         when(repository.findById(4L)).thenReturn(Optional.of(producto));
 
@@ -73,7 +71,7 @@ class ProductoServiceTest {
 
         assertEquals(7, producto.getStock());
         verify(repository).save(producto);
-        verify(inventarioClient).ajustarStock(4L, -3);
+        assertTrue(producto.isPendienteInventario());
     }
 
     @Test
@@ -84,7 +82,6 @@ class ProductoServiceTest {
 
         assertEquals("Stock insuficiente", exception.getMessage());
         verify(repository, never()).save(any(Producto.class));
-        verifyNoInteractions(inventarioClient);
     }
 
     private Producto producto(Long id, int stock, boolean activo) {

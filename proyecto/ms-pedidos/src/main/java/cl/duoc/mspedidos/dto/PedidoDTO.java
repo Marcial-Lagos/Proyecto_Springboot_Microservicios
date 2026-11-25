@@ -9,6 +9,11 @@ import java.util.List;
 public class PedidoDTO {
     private Long id;
     private Long usuarioId;
+    private String tipoEntrega;
+    private String nombreContacto;
+    private String correoContacto;
+    private BigDecimal costoEnvio;
+    private String referenciaPago;
     private Pedido.Estado estado;
     private BigDecimal total;
     private String direccionEntrega;

@@ -26,6 +26,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
     }
 
+    @ExceptionHandler(org.springframework.web.reactive.function.client.WebClientResponseException.class)
+    public ResponseEntity<Map<String, String>> servicio(org.springframework.web.reactive.function.client.WebClientResponseException ex) {
+        boolean conflicto = ex.getStatusCode().is4xxClientError();
+        return ResponseEntity.status(conflicto ? HttpStatus.CONFLICT : HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Map.of("error", conflicto ? "Revisa los productos y el stock de tu carrito"
+                        : "Servicio temporalmente no disponible. Reintenta el mismo pedido"));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> genericError(Exception ex) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", ex.getMessage()));

@@ -14,7 +14,9 @@ public class Inventario {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private Long productoId;
+    @Column(unique = true) private Long productoId;
+    private Long revisionProducto;
+    @Version @Column(nullable = false, columnDefinition = "bigint default 0") private long version;
     private String nombreProducto;
     private Integer stockActual;
     private Integer stockMinimo;
