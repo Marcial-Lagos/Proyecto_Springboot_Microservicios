@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class DirectosTest {
     private static final String SDP = "v=0\r\n";
-    private final Directos api = new Directos();
+    private final Directos api = new Directos(HistorialChatTest.crear());
 
     @Test void chatYContador() {
         var c = api.iniciar("1", Map.of("titulo", "Nexus"));
@@ -16,7 +16,7 @@ class DirectosTest {
         var m = api.mensaje(c.id(), "2", Map.of("texto", " hola "));
         assertEquals("hola", m.texto());
         assertEquals("2", m.usuario());
-        assertEquals(m, api.chat(c.id()).getFirst());
+        assertEquals(m, api.chat(c.id(),null).getFirst());
         assertEquals(400, assertThrows(ResponseStatusException.class,
             () -> api.mensaje(c.id(), "2", Map.of("texto", " "))).getStatusCode().value());
         api.salir(c.id(),"2");

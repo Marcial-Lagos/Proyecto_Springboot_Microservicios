@@ -1,0 +1,14 @@
+CREATE TABLE IF NOT EXISTS nexus_chat_directo (
+    id VARCHAR(36) PRIMARY KEY,
+    titulo VARCHAR(80) NOT NULL,
+    propietario VARCHAR(64) NOT NULL,
+    creado TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+CREATE TABLE IF NOT EXISTS nexus_chat_mensaje (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    canal VARCHAR(100) NOT NULL,
+    usuario VARCHAR(64) NOT NULL,
+    texto VARCHAR(2000) NOT NULL,
+    creado TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    INDEX idx_nexus_chat_canal_id (canal, id)
+);
