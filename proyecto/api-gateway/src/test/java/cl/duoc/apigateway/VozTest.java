@@ -5,6 +5,15 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 class VozTest {
+    @Test void participantesVisiblesSinEntrar() {
+        var v = new Voz();
+        v.entrar("general","1",Map.of("nombre","Ana"));
+        v.entrar("ranked","2",Map.of("nombre","Luis"));
+        assertEquals("Ana",v.participantes("general").getFirst().nombre());
+        assertEquals(1,v.participantes("ranked").size());
+        v.salir("general","1");
+        assertTrue(v.participantes("general").isEmpty());
+    }
     @Test void presenciaYsenalPrivada() {
         var v = new Voz();
         v.entrar("general","1", Map.of("nombre","Ana"));

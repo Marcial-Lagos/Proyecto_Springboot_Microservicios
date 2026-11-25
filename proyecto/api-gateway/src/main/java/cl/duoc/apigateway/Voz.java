@@ -31,6 +31,11 @@ public class Voz {
         s.activo = System.currentTimeMillis();
         return s;
     }
+    @GetMapping("/{sala}")
+    public synchronized List<Miembro> participantes(@PathVariable String sala) {
+        return sala(sala).entrySet().stream().map(e -> new Miembro(e.getKey(), e.getValue().nombre,
+                e.getValue().hablando, e.getValue().silencio)).sorted(Comparator.comparing(Miembro::nombre)).toList();
+    }
     @PostMapping("/{sala}")
     public synchronized void entrar(@PathVariable String sala, @RequestHeader("X-User-Id") String id,
                                     @RequestBody Map<String,String> datos) {
