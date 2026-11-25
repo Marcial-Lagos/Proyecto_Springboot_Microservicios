@@ -77,6 +77,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private boolean permitidoParaCliente(String method, String path, long id) {
+        if (path.equals(API + "directos") || path.startsWith(API + "directos/")) return true;
         if (path.equals(API + "usuarios/" + id)) return method.equals("GET") || method.equals("PATCH");
         if (path.equals(API + "pedidos")) return method.equals("POST");
         if (!method.equals("GET")) return false;
