@@ -8,7 +8,10 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/v1/directos")
 public class Directos {
-    record Anuncio(UUID id, String titulo) {}
+    record Anuncio(UUID id, String titulo, int espectadores) {}
+    record Mensaje(long id, String usuario, String texto) {}
+    private long secuencia = 0;
+    private final Map<UUID,List<Mensaje>> chats = new HashMap<>();
     record Canal(UUID id, String titulo, String propietario, Map<String, Conexion> espectadores) {}
     static class Conexion { String oferta; String respuesta; long activo; }
     record Senal(String sdp) {}
@@ -19,7 +22,7 @@ public class Directos {
     private void limpiar() {
         actividad.entrySet().removeIf(e -> {
             if (ahora()-e.getValue() < 120000) return false;
-            canales.remove(e.getKey()); return true;
+            canales.remove(e.getKey()); chats.remove(e.getKey()); return true;
         });
     }
     private Canal canal(UUID id) {
@@ -39,17 +42,17 @@ public class Directos {
         return s.sdp();
     }
     @GetMapping public synchronized List<Anuncio> listar() {
-        limpiar(); return canales.values().stream().map(c->new Anuncio(c.id(),c.titulo())).toList();
+        limpiar(); canales.values().forEach(c -> c.espectadores().values().removeIf(e -> ahora()-e.activo > 120000)); return canales.values().stream().map(c->new Anuncio(c.id(),c.titulo(),c.espectadores().size())).toList();
     }
     @PostMapping public synchronized Anuncio iniciar(@RequestHeader("X-User-Id") String usuario,@RequestBody Map<String,String> datos) {
         limpiar(); String titulo=datos.getOrDefault("titulo","").trim();
         if(titulo.isEmpty() || titulo.length()>80) throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         if(canales.values().stream().anyMatch(c->c.propietario().equals(usuario))) throw new ResponseStatusException(HttpStatus.CONFLICT,"Ya tienes un directo activo");
         var id=UUID.randomUUID(); canales.put(id,new Canal(id,titulo,usuario,new HashMap<>())); actividad.put(id,ahora());
-        return new Anuncio(id,titulo);
+        return new Anuncio(id,titulo,0);
     }
     @DeleteMapping("/{id}") public synchronized void cerrar(@PathVariable UUID id,@RequestHeader("X-User-Id") String usuario) {
-        propio(id,usuario); canales.remove(id); actividad.remove(id);
+        propio(id,usuario); canales.remove(id); actividad.remove(id); chats.remove(id);
     }
     @PutMapping("/{id}/oferta") public synchronized void ofrecer(@PathVariable UUID id,@RequestHeader("X-User-Id") String usuario,@RequestBody Senal datos) {
         var c=canal(id); String sdp=validar(datos);
@@ -70,5 +73,22 @@ public class Directos {
     }
     @DeleteMapping("/{id}/oferta") public synchronized void salir(@PathVariable UUID id,@RequestHeader("X-User-Id") String usuario) {
         canal(id).espectadores().remove(usuario);
+    }
+    @GetMapping("/{id}/chat")
+    public synchronized List<Mensaje> chat(@PathVariable UUID id) {
+        canal(id);
+        return List.copyOf(chats.getOrDefault(id, List.of()));
+    }
+    @PostMapping("/{id}/chat")
+    public synchronized Mensaje mensaje(@PathVariable UUID id, @RequestHeader("X-User-Id") String usuario,
+                                        @RequestBody Map<String,String> datos) {
+        canal(id);
+        String texto = Objects.toString(datos.get("texto"), "").trim();
+        if (texto.isEmpty() || texto.length() > 500) throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        var lista = chats.computeIfAbsent(id, x -> new ArrayList<>());
+        var m = new Mensaje(++secuencia, usuario, texto);
+        lista.add(m);
+        if (lista.size() > 100) lista.removeFirst();
+        return m;
     }
 }

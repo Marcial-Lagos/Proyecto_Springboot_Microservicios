@@ -9,6 +9,20 @@ class DirectosTest {
     private static final String SDP = "v=0\r\n";
     private final Directos api = new Directos();
 
+    @Test void chatYContador() {
+        var c = api.iniciar("1", Map.of("titulo", "Nexus"));
+        api.ofrecer(c.id(), "2", new Directos.Senal(SDP));
+        assertEquals(1, api.listar().getFirst().espectadores());
+        var m = api.mensaje(c.id(), "2", Map.of("texto", " hola "));
+        assertEquals("hola", m.texto());
+        assertEquals("2", m.usuario());
+        assertEquals(m, api.chat(c.id()).getFirst());
+        assertEquals(400, assertThrows(ResponseStatusException.class,
+            () -> api.mensaje(c.id(), "2", Map.of("texto", " "))).getStatusCode().value());
+        api.salir(c.id(),"2");
+        assertEquals(0, api.listar().getFirst().espectadores());
+    }
+
     @Test void cicloDeVida() {
         var c = api.iniciar("1", Map.of("titulo", "Nexus"));
         assertEquals(c, api.listar().getFirst());
